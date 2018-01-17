@@ -4,7 +4,8 @@
 #include<boost/dynamic_bitset.hpp>
 
 Instance::Instance(std::string fileName) {
-  k = 10;
+  nArcs = 0;
+  nRoots = 17;
   const int SCORE_SCALE = -1000000;
     int countParents = 0;
   std::ifstream file(fileName);
@@ -51,8 +52,12 @@ int Instance::getN() const {
   return n;
 }
 
-int Instance::getK() const {
-  return k;
+int Instance::getNumArcs() const {
+  return nArcs;
+}
+
+int Instance::getNumRoots() const {
+  return nRoots;
 }
 
 const Variable &Instance::getVar(int i) const {
