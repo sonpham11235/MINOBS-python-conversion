@@ -40,6 +40,8 @@ class LocalSearch {
     Types::Bitset getPred(const Ordering &ordering, int idx) const;
     Types::Score getBestScore(const Ordering &ordering) const;
     Types::Score getBestScoreWithParents(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores) const;
+    Types::Score getBestScoreWithMemo(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores, Types::Score ***& D, Types::Score ***& E) const;
+
     SwapResult findBestScoreSwap(const Ordering &ordering, int i, const std::vector<int> &parents, Types::Bitset &pred);
     PivotResult getBestInsert(const Ordering &ordering, int pivot, Types::Score initScore) const;
     FastPivotResult getBestInsertFast(const Ordering &ordering, int pivot, Types::Score initScore, const std::vector<int> &parents, const std::vector<Types::Score> &scores);
@@ -71,6 +73,10 @@ class LocalSearch {
     SearchResult kollerSearchV2(Ordering &o, int listSize, float timeLimit, ResultRegister &rr);
     FastPivotResult getInsertScore(Ordering o, int i, int j, Types::Score initScore, std::vector<int> parents, std::vector<Types::Score> scores);
     void checkSolution(const Ordering &o);
+
+
+    Types::Score *** alloc_3d() const;
+    void delete_3d(Types::Score ***& arr) const;
   private:
     const Instance &instance;
 };

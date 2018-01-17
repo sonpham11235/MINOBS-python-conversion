@@ -71,7 +71,6 @@ Types::Score LocalSearch::getBestScore(const Ordering &ordering) const {
       for (int l=0; l <= k2; l++) {
         D[i][j][l] = 223372036854775807LL;
       }
-
     }
   }
 
@@ -116,24 +115,43 @@ Types::Score LocalSearch::getBestScore(const Ordering &ordering) const {
   */
 }
 
-// New code
-Types::Score LocalSearch::getBestScoreWithParents(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores) const {
+Types::Score *** LocalSearch::alloc_3d() const{
+  int n = instance.getN() + 1, k1 = instance.getNumArcs() + 1, k2 = instance.getNumRoots() + 1;
+  Types::Score ***arr = new Types::Score** [n];
+
+
+  for (int i=0; i<n; i++) {
+    arr[i] = new Types::Score* [k1];
+    for (int j=0; j<k1; j++) {
+      arr[i][j] = new Types::Score[k2];
+      for (int l=0; l<k2; l++) {
+        arr[i][j][l] = 223372036854775807LL;
+      }
+    }
+  }
+  return arr;
+}
+
+void LocalSearch::delete_3d(Types::Score ***& arr) const {
+  int n = instance.getN() + 1, k1 = instance.getNumArcs() + 1, k2 = instance.getNumRoots() + 1;
+
+  for (int i=0; i<n; i++) {
+    for (int j=0; j<k1; j++) {
+      delete[] arr[i][j];
+    }
+    delete[] arr[i];
+  }
+  delete[] arr;
+}
+
+
+Types::Score LocalSearch::getBestScoreWithMemo(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores, Types::Score ***& D, Types::Score ***& E) const {
 
   int n = instance.getN(), k1 = instance.getNumArcs(), k2 = instance.getNumRoots();
 
-  Types::Score D[n+1][k1+1][k2+1], E[n+1][k1+1][k2+1]; // offset E[i][...][...] by 1 for indexing
   int pid[n+1][k1+1][k2+1], psc[n+1][k1+1][k2+1], psz[n+1][k1+1][k2+1];
   Types::Bitset pred(n, 0);
 
-  for (int i=0; i <= n; i++) {
-    for (int j=0; j <= k1; j++) {
-      for (int l=0; l <= k2; l++) {
-        D[i][j][l] = 223372036854775807LL;
-        E[i][j][l] = 223372036854775807LL;
-      }
-
-    }
-  }
 
   D[0][0][0] = 0;
   E[n][0][0] = 0;
@@ -193,29 +211,105 @@ Types::Score LocalSearch::getBestScoreWithParents(const Ordering &ordering, std:
     }
   }
 
-  if (D[n][k1][k2] != 223372036854775807LL) {
-    int j = k1, l = k2;
+  int bestNumArcs=0;
+  Types::Score bestScore = 223372036854775807LL; 
+
+  for (int j = 0; j<=k1; j++) {
+    if (D[n][j][k2] < bestScore) {
+      bestScore = D[n][j][k2];
+      bestNumArcs = j;
+    }
+  }
+
+  if (D[n][bestNumArcs][k2] != 223372036854775807LL) {
+    int j = bestNumArcs, l = k2;
     for (int i=n; i > 0; i--) {
       parents[ordering.get(i-1)] = pid[i][j][l];
       scores[ordering.get(i-1)] = psc[i][j][l];
+      int jj = j;
       j -= psz[i][j][l];
-      l -= (psz[i][j][l] == 0)? 1 : 0;
+      l -= (psz[i][jj][l] == 0)? 1 : 0;
     }
   }
-  return D[n][k1][k2];
 
-/*  int n = instance.getN();
+  return bestScore;
+}
+
+
+
+// New code
+Types::Score LocalSearch::getBestScoreWithParents(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores) const {
+
+  int n = instance.getN(), k1 = instance.getNumArcs(), k2 = instance.getNumRoots();
+
+  Types::Score D[n+1][k1+1][k2+1];
+  int pid[n+1][k1+1][k2+1], psc[n+1][k1+1][k2+1], psz[n+1][k1+1][k2+1];
   Types::Bitset pred(n, 0);
-  Types::Score score = 0;
-  for (int i = 0; i < n; i++) {
-    const ParentSet &p = bestParent(ordering, pred, i);
-    score += p.getScore();
-    parents[ordering.get(i)] = p.getId();
-    scores[ordering.get(i)] = p.getScore();
-    pred[ordering.get(i)] = 1;
+
+  for (int i=0; i <= n; i++) {
+    for (int j=0; j <= k1; j++) {
+      for (int l=0; l <= k2; l++) {
+        D[i][j][l] = 223372036854775807LL;
+      }
+
+    }
   }
-  return score;
-*/
+
+  D[0][0][0] = 0;
+
+  // Compute D[i][j][k] entries
+  for (int i=1; i <= n; i++) {
+    for (int j=0; j <= k1; j++) {
+      for (int l=0; l <= k2; l++) {
+        int current = ordering.get(i-1);
+        const Variable &v = instance.getVar(current);
+
+        int numParents = v.numParents();
+        for (int z = 0; z < numParents; z++) {
+          const ParentSet &p = v.getParent(z);
+          int w2 = (p.size() == 0) ? 1 : 0;
+          if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
+            
+            if (D[i-1][j-p.size()][l - w2] + p.getScore() < D[i][j][l]) {
+              D[i][j][l] = D[i-1][j-p.size()][l - w2] + p.getScore();
+              pid[i][j][l] = p.getId();
+              psc[i][j][l] = p.getScore();
+              psz[i][j][l] = p.size();
+            }
+          }
+        }
+      }
+    }
+
+    pred[ordering.get(i-1)] = 1;  
+  }
+
+  int bestNumArcs=0;
+  Types::Score bestScore = 223372036854775807LL; 
+
+  for (int j = 0; j<=k1; j++) {
+    if (D[n][j][k2] < bestScore) {
+      bestScore = D[n][j][k2];
+      bestNumArcs = j;
+    }
+  }
+
+  if (bestScore != 223372036854775807LL) {
+    int j = bestNumArcs, l = k2;
+    for (int i=n; i > 0; i--) {
+      parents[ordering.get(i-1)] = pid[i][j][l];
+      scores[ordering.get(i-1)] = psc[i][j][l];
+      int jj = j;
+      j -= psz[i][j][l];
+      l -= (psz[i][jj][l] == 0)? 1 : 0;
+    }
+
+    assert(j == 0);
+    assert(l == 0);
+  } else {
+    std::cout << "Infeasible" << std::endl;
+  }
+  return bestScore;
 }
 
 Types::Score LocalSearch::findBestScoreRange(const Ordering &o, int start, int end) {
@@ -766,12 +860,14 @@ PivotResult LocalSearch::getBestInsert(const Ordering &ordering, int pivot, Type
 
 SearchResult LocalSearch::hillClimb(const Ordering &ordering) {
   bool improving = false;
-  int n = instance.getN();
+  int n = instance.getN(), k1 = instance.getNumArcs(), k2 = instance.getNumRoots();
   std::vector<int> parents(n);
   std::vector<Types::Score> scores(n);
   int steps = 0;
   std::vector<int> positions(n);
   Ordering cur(ordering);
+
+  //Types::Score *** D = alloc_3d(), *** E = alloc_3d();
   Types::Score curScore = getBestScoreWithParents(cur, parents, scores);
   std::iota(positions.begin(), positions.end(), 0);
   DBG("Inits: " << cur);
