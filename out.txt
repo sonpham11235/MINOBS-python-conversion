@@ -1,13 +1,9 @@
-zoo_BIC.txt
-zoo_BIC.txt
+abalone_BIC.txt
+abalone_BIC.txt
 5
 1
 out.txt
 BEST
 Time (ms)	Score, followed by ordering next line
-7	777691594
-10 2 3 16 9 5 0 15 7 11 1 4 13 8 12 6 14 
-14	777558738
-1 16 9 8 13 5 6 14 3 15 4 7 11 2 10 0 12 
-20	773486071
-10 2 3 16 1 12 15 4 8 13 9 5 0 6 14 7 11 
+117	223372036854775807
+6 7 3 1 5 2 4 0 8 

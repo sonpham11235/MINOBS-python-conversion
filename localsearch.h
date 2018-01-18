@@ -9,7 +9,6 @@
 #include "population.h"
 #include "resultregister.h"
 #include "swapresult.h"
-#include "fastpivotresult.h"
 #include "types.h"
 
 enum class Neighbours {
@@ -40,18 +39,16 @@ class LocalSearch {
     Types::Bitset getPred(const Ordering &ordering, int idx) const;
     Types::Score getBestScore(const Ordering &ordering) const;
     Types::Score getBestScoreWithParents(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores) const;
-    Types::Score getBestScoreWithMemo(const Ordering &ordering, std::vector<int> &parents, std::vector<Types::Score> &scores, Types::Score ***& D, Types::Score ***& E) const;
-
-    SwapResult findBestScoreSwap(const Ordering &ordering, int i, const std::vector<int> &parents, Types::Bitset &pred);
-    PivotResult getBestInsert(const Ordering &ordering, int pivot, Types::Score initScore) const;
-    FastPivotResult getBestInsertFast(const Ordering &ordering, int pivot, Types::Score initScore, const std::vector<int> &parents, const std::vector<Types::Score> &scores, Types::Score ***& D, Types::Score ***& E);
+    Types::Score getBestScoreWithMemo(const Ordering &ordering, Types::Score ***& D, Types::Score ***& E) const;
+    Types::Score swappedScoreBack(const Ordering &ordering, int i, Types::Bitset &pred, Types::Score ***& D, Types::Score ***& E);
+    Types::Score swappedScoreForward(const Ordering &ordering, int i, Types::Bitset &pred, Types::Score ***& D, Types::Score ***& E);
+    Ordering getBestInsertFast(const Ordering &ordering, int pivot, Types::Score initScore, Types::Score ***& D, Types::Score ***& E);
     SearchResult makeResult(const Ordering &ordering) const;
     SearchResult hillClimb(const Ordering &ordering);
     std::vector<int> bestParentIds(const Ordering &ordering);
     Ordering depthSort(const Ordering &ordering);
     SearchResult genetic(float cutoffTime, int INIT_POPULATION_SIZE, int NUM_CROSSOVERS, int NUM_MUTATIONS, int MUTATION_POWER, int DIV_LOOKAHEAD, int NUM_KEEP, float DIV_TOLERANCE, CrossoverType crossoverType, int greediness, Types::Score opt, ResultRegister &rr);
     int getDepth(int m, const std::vector<int> &depth, const Ordering &o, const ParentSet &parent);
-    FastPivotResult getInsertScore(Ordering o, int i, int j, Types::Score initScore, std::vector<int> parents, std::vector<Types::Score> scores);
     void checkSolution(const Ordering &o);
 
 

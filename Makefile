@@ -19,8 +19,7 @@ SRCS  = main.cpp \
 	tabulist.cpp \
 	movetabulist.cpp \
 	swaptabulist.cpp \
-	swapresult.cpp \
-	fastpivotresult.cpp
+	swapresult.cpp
 
 OBJS  =	$(SRCS:.cpp=.o)
 
@@ -50,4 +49,3 @@ tabulist.o: 		tabulist.h ordering.h
 movetabulist.o: 	movetabulist.h ordering.h
 swaptabulist.o:		swaptabulist.h ordering.h
 swapresult.o:		swapresult.h types.h
-fastpivotresult.o:	fastpivotresult.h ordering.h types.h
