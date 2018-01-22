@@ -4,7 +4,7 @@
 #include<boost/dynamic_bitset.hpp>
 
 Instance::Instance(std::string fileName) {
-  nArcs = 30;
+  nArcs = 80;
   nRoots = 1;
   const int SCORE_SCALE = -1000000;
     int countParents = 0;

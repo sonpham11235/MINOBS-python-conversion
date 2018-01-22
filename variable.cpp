@@ -1,22 +1,37 @@
 #include "variable.h"
 #include "debug.h"
 Variable::Variable(int numParents, int varId, int n) :
-  parentsWithVar(), nParents(numParents),  varId(varId) { }
+  parentsWithVar(), nParents(numParents),  varId(varId) {}
 
 Variable::Variable() { };
 
 void Variable::addParentSet(ParentSet parentSet) {
   parents.push_back(parentSet);
+  if (parentSet.size() == 0) {
+    emptyIdx = parents.size() - 1;
+  }
 }
 
 const ParentSet &Variable::getParent(int i) const {
   return parents[i];
 }
 
+const ParentSet &Variable::getEmptyParent() const {
+  assert(parents[emptyIdx].size() == 0);
+  return parents[emptyIdx];
+}
+
 void Variable::parentSort() {
   std::sort(parents.begin(), parents.end(), [](ParentSet a, ParentSet b) {
     return a.getScore() < b.getScore();
   });
+
+  for (int i=0; i < parents.size(); i++) {
+    if (parents[i].size() == 0) {
+      emptyIdx = i;
+      break;
+    }
+  }
 }
 
 int Variable::numParents() const {

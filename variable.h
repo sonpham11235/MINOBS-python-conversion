@@ -12,6 +12,7 @@ class Variable {
     void addParentSet(ParentSet parentSet);
     int numParents() const;
     const ParentSet &getParent(int i) const;
+    const ParentSet &getEmptyParent() const;
     void parentSort();
     friend std::ostream& operator<<(std::ostream &os, const Variable& v);
     void resetParentIds();
@@ -23,6 +24,7 @@ class Variable {
     int nParents;
     std::vector<ParentSet> parents;
     int varId;
+    int emptyIdx;
 };
 
 #endif /* VARIABLE_H */

@@ -89,9 +89,6 @@ void LocalSearch::delete_3d(Types::Score ***& arr) const {
 Types::Score LocalSearch::getBestScoreWithMemo(const Ordering &ordering, Types::Score ***& D, Types::Score ***& E) const {
 
   int n = instance.getN(), k1 = instance.getNumArcs(), k2 = instance.getNumRoots();
-
-  int pid[n+1][k1+1][k2+1], psz[n+1][k1+1][k2+1];
-  Types::Score psc[n+1][k1+1][k2+1];
   Types::Bitset pred(n, 0);
 
   for (int i=0; i <= n; i++) {
@@ -99,33 +96,48 @@ Types::Score LocalSearch::getBestScoreWithMemo(const Ordering &ordering, Types::
       for (int l=0; l <= k2; l++) {
         D[i][j][l] = 223372036854775807LL;
         E[i][j][l] = 223372036854775807LL;
+
+        if (i == 0 && l == 0) {
+          D[i][j][l] = 0;
+        }
+
+        if (i == n && l == 0) {
+          E[i][j][l] = 0;
+        }
       }
     }
   }
 
-
-  for (int j=0; j<=k1; j++) {
-    D[0][j][0] = 0;
-    E[n][j][0] = 0;
-  }
-
-
   // Compute D[i][j][k] entries
   for (int i=1; i <= n; i++) {
     for (int j=0; j <= k1; j++) {
-      for (int l=0; l <= k2; l++) {
+      for (int l=1; l <= k2; l++) {
+        if (l > i) {
+          continue;
+        }
+
+        if (l+n-i < k2) {
+          continue;
+        }
+
         int current = ordering.get(i-1);
         const Variable &v = instance.getVar(current);
+
+        // We must choose the empty set in this case otherwise
+        // there won't be enough root nodes.
+        if (l == i) {
+          D[i][j][l] = std::min(D[i][j][l], D[i-1][j][l-1] + v.getEmptyParent().getScore());
+          continue;
+        }
+
 
         int numParents = v.numParents();
         for (int z = 0; z < numParents; z++) {
           const ParentSet &p = v.getParent(z);
           int w2 = (p.size() == 0) ? 1 : 0;
-          if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-            
-            if (D[i-1][j-p.size()][l - w2] + p.getScore() < D[i][j][l]) {
-              D[i][j][l] = D[i-1][j-p.size()][l - w2] + p.getScore();
-            }
+
+          if (j >= p.size() && l >= w2 && D[i-1][j-p.size()][l - w2] + p.getScore() < D[i][j][l] && p.subsetOf(pred) ) {
+            D[i][j][l] = D[i-1][j-p.size()][l - w2] + p.getScore();
           }
         }
       }
@@ -140,18 +152,27 @@ Types::Score LocalSearch::getBestScoreWithMemo(const Ordering &ordering, Types::
   for (int i=n-1; i >= 0; i--) {
     for (int j=0; j <= k1; j++) {
       for (int l = 0; l <= k2; l++) {
+        if (l > n-i) {
+          continue;
+        }
+
+        if (l+i < k2) {
+          continue;
+        }
         int current = ordering.get(i);
         const Variable &v = instance.getVar(current);
 
+        if (l == n-i) {
+          E[i][j][l] = std::min(E[i][j][l], E[i+1][j][l-1] + v.getEmptyParent().getScore());
+          continue;
+        }
 
         int numParents = v.numParents();
         for (int z = 0; z < numParents; z++) {
           const ParentSet &p = v.getParent(z);
           int w2 = (p.size() == 0) ? 1 : 0;
-          if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-            if (E[i+1][j-p.size()][l-w2] + p.getScore() < E[i][j][l]) {
-              E[i][j][l] = E[i+1][j-p.size()][l-w2] + p.getScore();
-            }
+          if (j >= p.size() && l >= w2 && E[i+1][j-p.size()][l - w2] + p.getScore() < E[i][j][l]  && p.subsetOf(pred) ) {
+            E[i][j][l] = E[i+1][j-p.size()][l-w2] + p.getScore();
           }
         }
       }
@@ -209,22 +230,33 @@ Types::Score LocalSearch::getBestScoreWithParents(const Ordering &ordering, std:
   // Compute D[i][j][k] entries
   for (int i=1; i <= n; i++) {
     for (int j=0; j <= k1; j++) {
-      for (int l=0; l <= k2; l++) {
+      for (int l=1; l <= k2; l++) {
+        if (l > i) {
+          continue;
+        }
+        if (l+n-i < k2) {
+          continue;
+        }
         int current = ordering.get(i-1);
         const Variable &v = instance.getVar(current);
+
+        if (l == i) {
+          D[i][j][l] = std::min(D[i][j][l], D[i-1][j][l-1] + v.getEmptyParent().getScore());
+          pid[i][j][l] = v.getEmptyParent().getId();
+          psc[i][j][l] = v.getEmptyParent().getScore();
+          psz[i][j][l] = v.getEmptyParent().size();
+          continue;
+        }
 
         int numParents = v.numParents();
         for (int z = 0; z < numParents; z++) {
           const ParentSet &p = v.getParent(z);
           int w2 = (p.size() == 0) ? 1 : 0;
-          if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-            
-            if (D[i-1][j-p.size()][l - w2] + p.getScore() < D[i][j][l]) {
-              D[i][j][l] = D[i-1][j-p.size()][l - w2] + p.getScore();
-              pid[i][j][l] = p.getId();
-              psc[i][j][l] = p.getScore();
-              psz[i][j][l] = p.size();
-            }
+          if (j >= p.size() && l >= w2 && D[i-1][j-p.size()][l - w2] + p.getScore() < D[i][j][l] && p.subsetOf(pred) ) {
+            D[i][j][l] = D[i-1][j-p.size()][l - w2] + p.getScore();
+            pid[i][j][l] = p.getId();
+            psc[i][j][l] = p.getScore();
+            psz[i][j][l] = p.size();
           }
         }
       }
@@ -268,18 +300,28 @@ const Ordering &ordering, int i, Types::Bitset &pred, Types::Score ***& D, Types
 
   // newordering[i+1]
   for (int j=0; j <= k1; j++) {
-    for (int l = 0; l <= k2; l++) {
+    for (int l = 1; l <= k2; l++) {
+      if (l > i+1) {
+        continue;
+      }
+
+      if (l+n-i-1 < k2) {
+        continue;
+      }
       int current = ordering.get(i+1);
       const Variable &v = instance.getVar(current);
+
+      if (l == i+1) {
+        D[i+1][j][l] = std::min(D[i+1][j][l], D[i][j][l-1] + v.getEmptyParent().getScore());
+        continue;
+      }
 
       int numParents = v.numParents();
       for (int z = 0; z < numParents; z++) {
         const ParentSet &p = v.getParent(z);
         int w2 = (p.size() == 0) ? 1 : 0;
-        if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-          if (D[i][j-p.size()][l-w2] + p.getScore() < D[i+1][j][l]) {
-            D[i+1][j][l] = D[i][j-p.size()][l-w2] + p.getScore();
-          }
+        if (j >= p.size() && l >= w2 && D[i][j-p.size()][l-w2] + p.getScore() < D[i+1][j][l] && p.subsetOf(pred)) {
+          D[i+1][j][l] = D[i][j-p.size()][l-w2] + p.getScore();
         }
       }
     }
@@ -290,20 +332,29 @@ const Ordering &ordering, int i, Types::Bitset &pred, Types::Score ***& D, Types
   pred[ordering.get(i+1)] = 1;
 
   for (int j=0; j <= k1; j++) {
-    for (int l = 0; l <= k2; l++) {
+    for (int l = 1; l <= k2; l++) {
+      if (l > i+2) {
+        continue;
+      }
+
+      if (l+n-i-2 < k2) {
+        continue;
+      }
       int current = ordering.get(i);
       const Variable &v = instance.getVar(current);
+
+      if (l == i+2) {
+        D[i+2][j][l] = std::min(D[i+2][j][l], D[i+1][j][l-1] + v.getEmptyParent().getScore());
+        continue;
+      }
 
       int numParents = v.numParents();
       for (int z = 0; z < numParents; z++) {
         const ParentSet &p = v.getParent(z);
         int w2 = (p.size() == 0) ? 1 : 0;
 
-
-        if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-          if (D[i+1][j-p.size()][l-w2] + p.getScore() < D[i+2][j][l]) {
-            D[i+2][j][l] = D[i+1][j-p.size()][l-w2] + p.getScore();
-          }
+        if (j >= p.size() && l >= w2 && D[i+1][j-p.size()][l-w2] + p.getScore() < D[i+2][j][l] && p.subsetOf(pred)) {
+          D[i+2][j][l] = D[i+1][j-p.size()][l-w2] + p.getScore();
         }
       }
     }
@@ -351,17 +402,28 @@ const Ordering &ordering, int i, Types::Bitset &pred, Types::Score ***& D, Types
   // newordering[i+1]
   for (int j=0; j <= k1; j++) {
     for (int l = 0; l <= k2; l++) {
+      if (l > n-i) {
+        continue;
+      }
+
+      if (l+i < k2) {
+        continue;
+      }
+
       int current = ordering.get(i-1);
       const Variable &v = instance.getVar(current);
+
+      if (l == n-i) {
+        E[i][j][l] = std::min(E[i][j][l], E[i+1][j][l-1] + v.getEmptyParent().getScore());
+        continue;
+      }
 
       int numParents = v.numParents();
       for (int z = 0; z < numParents; z++) {
         const ParentSet &p = v.getParent(z);
         int w2 = (p.size() == 0) ? 1 : 0;
-        if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-          if (E[i+1][j-p.size()][l-w2] + p.getScore() < E[i][j][l]) {
+        if (j >= p.size() && l >= w2 && E[i+1][j-p.size()][l-w2] + p.getScore() < E[i][j][l] && p.subsetOf(pred)) {
             E[i][j][l] = E[i+1][j-p.size()][l-w2] + p.getScore();
-          }
         }
       }
     }
@@ -373,18 +435,26 @@ const Ordering &ordering, int i, Types::Bitset &pred, Types::Score ***& D, Types
 
   for (int j=0; j <= k1; j++) {
     for (int l = 0; l <= k2; l++) {
+      if (l > n-i+1) {
+        continue;
+      }
+      if (l+i-1 < k2) {
+        continue;
+      }
       int current = ordering.get(i);
       const Variable &v = instance.getVar(current);
+
+      if (l == n-i) {
+        E[i-1][j][l] = std::min(E[i-1][j][l], E[i][j][l-1] + v.getEmptyParent().getScore());
+        continue;
+      }
 
       int numParents = v.numParents();
       for (int z = 0; z < numParents; z++) {
         const ParentSet &p = v.getParent(z);
         int w2 = (p.size() == 0) ? 1 : 0;
-        if (p.subsetOf(pred) && j >= p.size() && l >= w2) {
-          if (E[i][j-p.size()][l-w2] + p.getScore() < E[i-1][j][l]) {
+        if (j >= p.size() && l >= w2 && E[i][j-p.size()][l-w2] + p.getScore() < E[i-1][j][l] && p.subsetOf(pred)) {
             E[i-1][j][l] = E[i][j-p.size()][l-w2] + p.getScore();
-
-          }
         }
       }
     }

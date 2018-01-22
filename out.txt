@@ -1,9 +1,9 @@
-abalone_BIC.txt
-abalone_BIC.txt
-5
-1
+water1000_BIC.txt
+water1000_BIC.txt
+10
+-1
 out.txt
 BEST
 Time (ms)	Score, followed by ordering next line
-117	223372036854775807
-6 7 3 1 5 2 4 0 8 
+115	223372036854775807
+28 23 16 0 2 10 7 18 11 14 9 27 19 17 15 25 6 5 8 31 12 22 29 20 3 4 26 1 21 13 24 30 
